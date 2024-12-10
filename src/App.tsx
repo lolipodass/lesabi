@@ -1,9 +1,12 @@
 import { useState } from "react";
+import "./App.css";
 import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
 const App = () => {
-  const [imagePath, setImagePath] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [inputImagePath, setInputImagePath] = useState<string | null>(null);
+  const [buffImagePath, setBuffImagePath] = useState<string | null>(null);
   const [message, setMessage] = useState("Hello, world!");
   const [bitsPerChannel, setBitsPerChannel] = useState(1);
 
@@ -12,57 +15,71 @@ const App = () => {
       multiple: false,
       directory: false,
     });
-    console.log(file);
     if (file) {
-      setImagePath(file); // Сохраняем путь к изображению
+      setInputImagePath(file);
+      setErrorMessage("");
     }
   };
 
   const handleEncrypt = async () => {
-    if (imagePath) {
+    if (inputImagePath) {
       try {
-        await invoke("encrypt", {
-          filepath: imagePath,
-          message,
-          bits_per_channel: bitsPerChannel,
-        });
-        alert("Изображение успешно зашифровано!");
+        setBuffImagePath(
+          await invoke("encrypt", {
+            filepath: inputImagePath,
+            message,
+            bitsPerChannel,
+          })
+        );
+        setErrorMessage("");
       } catch (error) {
         console.error(error);
-        alert("Ошибка при шифровании изображения.");
+        setErrorMessage("Failed to encrypt the image.");
       }
     } else {
-      alert("Сначала выберите файл для шифрования.");
+      setErrorMessage("Please select an image first.");
     }
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Шифрование изображения</h1>
-      <button onClick={handleOpenFile}>Открыть файл</button>
-      {imagePath && (
-        <div>
-          <h2>Выбранное изображение:</h2>
-          <img
-            src={convertFileSrc(imagePath)}
-            alt="Selected"
-            style={{ maxWidth: "300px", maxHeight: "300px" }}
-          />
+    <>
+      <h2>Steganography</h2>
+      {errorMessage && <div className="error"> {errorMessage} </div>}
+      <div className="container">
+        <div className="toolbar flex">
+          <button className="icon-button" onClick={handleOpenFile}>
+            Open file
+          </button>
+          <button className="icon-button">Сохранить файл</button>
         </div>
-      )}
-      <div>
-        <label>
-          Сообщение:
+        <div className="image-comparison flex">
+          <div className="image-container">
+            {inputImagePath && (
+              <img src={convertFileSrc(inputImagePath)} alt="Изображение 1" />
+            )}
+          </div>
+          <div className="image-container">
+            {buffImagePath && (
+              <img src={convertFileSrc(buffImagePath)} alt="Изображение 2" />
+            )}
+          </div>
+        </div>
+        <div className="flex toolbar">
+          <div className="generate-buttons">
+            <button onClick={handleEncrypt} className="hide">
+              hide data
+            </button>
+            <button onClick={handleEncrypt} className="generate-button">
+              reveal data
+            </button>
+          </div>
+        </div>
+        <div>
           <input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
-        </label>
-      </div>
-      <div>
-        <label>
-          Биты на канал:
           <input
             type="number"
             value={bitsPerChannel}
@@ -70,48 +87,10 @@ const App = () => {
             min="1"
             max="8"
           />
-        </label>
+        </div>
       </div>
-      <button onClick={handleEncrypt}>Зашифровать</button>
-    </div>
+    </>
   );
 };
 
 export default App;
-
-// import { useState } from "react";
-// import { invoke } from "@tauri-apps/api/core";
-// import "./App.css";
-
-// function App() {
-//   const [greetMsg, setGreetMsg] = useState("");
-//   const [name, setName] = useState("");
-
-//   async function greet() {
-//     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-//     setGreetMsg(await invoke("greet", { name }));
-//   }
-
-//   return (
-//     <main className="container">
-//       //write simple two image comparison app
-//       <form
-//         className="row"
-//         onSubmit={(e) => {
-//           e.preventDefault();
-//           greet();
-//         }}
-//       >
-//         <input
-//           id="greet-input"
-//           onChange={(e) => setName(e.currentTarget.value)}
-//           placeholder="Enter a name..."
-//         />
-//         <button type="submit">Greet</button>
-//       </form>
-//       <p>{greetMsg}</p>
-//     </main>
-//   );
-// }
-
-// export default App;

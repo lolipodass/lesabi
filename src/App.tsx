@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./App.css";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
 const App = () => {
@@ -8,9 +8,10 @@ const App = () => {
   const [inputImagePath, setInputImagePath] = useState<string | null>(null);
   const [buffImagePath, setBuffImagePath] = useState<string | null>(null);
   const [message, setMessage] = useState("Hello, world!");
+  const [hideMessage, setHideMessage] = useState("");
   const [bitsPerChannel, setBitsPerChannel] = useState(1);
 
-  const handleOpenFile = async () => {
+  const OpenFile = async () => {
     const file = await open({
       multiple: false,
       directory: false,
@@ -21,11 +22,35 @@ const App = () => {
     }
   };
 
-  const handleEncrypt = async () => {
+  const saveFile = async () => {
+    if (buffImagePath) {
+      let file = await save({
+        filters: [
+          {
+            name: "Images",
+            extensions: ["png"],
+          },
+        ],
+      });
+      if (file) {
+        console.log(file);
+
+        await invoke("save_file", { filepath: file });
+        setErrorMessage("");
+      } else {
+        setErrorMessage("Failed to save the file.");
+      }
+    } else {
+      setErrorMessage("Please encrypt the image first.");
+    }
+  };
+
+  const hide = async () => {
     if (inputImagePath) {
       try {
+        setBuffImagePath("");
         setBuffImagePath(
-          await invoke("encrypt", {
+          await invoke("hide_data", {
             filepath: inputImagePath,
             message,
             bitsPerChannel,
@@ -41,26 +66,47 @@ const App = () => {
     }
   };
 
+  const reveal = async () => {
+    if (inputImagePath) {
+      try {
+        setHideMessage(
+          await invoke("extract_data", {
+            filepath: inputImagePath,
+            bitsPerChannel,
+          })
+        );
+        setErrorMessage("");
+      } catch (error) {
+        console.error(error);
+        setErrorMessage("Failed to decrypt the image.");
+      }
+    } else {
+      setErrorMessage("Please select the image first.");
+    }
+  };
+
   return (
     <>
       <h2>Steganography</h2>
       {errorMessage && <div className="error"> {errorMessage} </div>}
       <div className="container">
         <div className="toolbar flex">
-          <button className="icon-button" onClick={handleOpenFile}>
+          <button className="icon-button" onClick={OpenFile}>
             Open file
           </button>
-          <button className="icon-button">Сохранить файл</button>
+          <button className="icon-button" onClick={saveFile}>
+            Save file
+          </button>
         </div>
         <div className="image-comparison flex">
           <div className="image-container">
             {inputImagePath && (
-              <img src={convertFileSrc(inputImagePath)} alt="Изображение 1" />
+              <img src={convertFileSrc(inputImagePath)} alt="Initial image" />
             )}
           </div>
           <div className="image-container">
             {buffImagePath && (
-              <img src={convertFileSrc(buffImagePath)} alt="Изображение 2" />
+              <img src={convertFileSrc(buffImagePath)} alt="Changed image" />
             )}
           </div>
         </div>
@@ -69,12 +115,12 @@ const App = () => {
             <button onClick={handleEncrypt} className="hide">
               hide data
             </button>
-            <button onClick={handleEncrypt} className="generate-button">
+            <button onClick={reveal} className="generate-button">
               reveal data
             </button>
           </div>
         </div>
-        <div>
+        <div className="flex">
           <input
             type="text"
             value={message}
@@ -88,6 +134,7 @@ const App = () => {
             max="8"
           />
         </div>
+        <div className="message">{hideMessage}</div>
       </div>
     </>
   );

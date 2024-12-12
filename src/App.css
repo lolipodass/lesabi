@@ -29,7 +29,6 @@ h2 {
 
 .container {
   margin: 0;
-  padding-top: 2vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -94,6 +93,7 @@ button {
 
 .toolbar {
   gap: 1rem;
+  margin: 2px auto;
 }
 
 .image-comparison {

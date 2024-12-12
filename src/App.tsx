@@ -55,8 +55,6 @@ const App = () => {
         ],
       });
       if (file) {
-        console.log(file);
-
         await invoke("save_file", { filepath: file });
         setErrorMessage("");
       } else {
@@ -68,9 +66,18 @@ const App = () => {
   };
 
   const hide = async () => {
+    if (!message.trim()) {
+      setErrorMessage("Message cannot be empty.");
+      return;
+    }
+
+    if (bitsPerChannel < 1 || bitsPerChannel > 8) {
+      setErrorMessage("Bits per channel must be between 1 and 8.");
+      return;
+    }
+
     if (inputImagePath) {
       try {
-        setBuffImagePath("");
         setBuffImagePath(
           await invoke("hide_data", {
             filepath: inputImagePath,
@@ -128,21 +135,22 @@ const App = () => {
           </div>
           <div className="image-container">
             {buffImagePath && (
-              <img src={convertFileSrc(buffImagePath)} alt="Changed image" />
+              <img
+                src={`${convertFileSrc(buffImagePath)}?${Date.now()}`}
+                alt="Changed image"
+              />
             )}
           </div>
         </div>
         <div className="flex toolbar">
-          <div className="generate-buttons">
-            <button onClick={hide} className="hide">
-              hide data
-            </button>
-            <button onClick={reveal} className="generate-button">
-              reveal data
-            </button>
-          </div>
+          <button onClick={hide} className="hide">
+            hide data
+          </button>
+          <button onClick={reveal} className="generate-button">
+            reveal data
+          </button>
         </div>
-        <div className="flex">
+        <div className="flex toolbar">
           <input
             type="text"
             value={message}

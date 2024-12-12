@@ -5,7 +5,7 @@ use method::hide;
 mod method;
 
 #[tauri::command]
-async fn encrypt(filepath: String, message: String, bits_per_channel: u8) -> String {
+async fn hide_data(filepath: String, message: String, bits_per_channel: u8) -> String {
     let img = image::open(filepath).unwrap();
 
     let mut bits_per_channel = bits_per_channel;
@@ -57,7 +57,7 @@ pub fn run() {
         ::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![encrypt, extract_data, save_file, generate_map])
+        .invoke_handler(tauri::generate_handler![hide_data, extract_data, save_file, generate_map])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

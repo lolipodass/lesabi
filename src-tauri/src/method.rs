@@ -30,11 +30,27 @@ pub fn hide(
         res.put_pixel(x, y, pixel);
     }
 
+    //add hidden check pixel
+    let pixel = Rgba([1, 1, 1, 0]);
+
+    res.put_pixel(w - 1, h - 1, pixel);
     res
 }
 
 pub fn extract(container: DynamicImage, bits_per_channel: u8) -> Vec<u8> {
     const CHANNELS_AMOUNT: u64 = 3;
+
+    let (w, h) = container.dimensions();
+
+    if w < 10 || h < 10 {
+        return Vec::new();
+    }
+
+    let pixel = container.get_pixel(w - 1, h - 1);
+
+    if pixel[0] != 1 || pixel[1] != 1 || pixel[2] != 1 {
+        return Vec::new();
+    }
 
     let mut pixels = container.pixels();
 

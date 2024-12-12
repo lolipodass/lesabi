@@ -15,6 +15,28 @@ const App = () => {
     const file = await open({
       multiple: false,
       directory: false,
+      filters: [
+        {
+          name: "Images",
+          extensions: [
+            "ff",
+            "gif",
+            "hdr",
+            "ico",
+            "jpg",
+            "jpeg",
+            "exr",
+            "png",
+            "ppm",
+            "pgm",
+            "pbm",
+            "qoi",
+            "tga",
+            "tif",
+            "tiff",
+          ],
+        },
+      ],
     });
     if (file) {
       setInputImagePath(file);
@@ -112,7 +134,7 @@ const App = () => {
         </div>
         <div className="flex toolbar">
           <div className="generate-buttons">
-            <button onClick={handleEncrypt} className="hide">
+            <button onClick={hide} className="hide">
               hide data
             </button>
             <button onClick={reveal} className="generate-button">

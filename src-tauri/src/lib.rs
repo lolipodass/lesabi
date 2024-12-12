@@ -36,6 +36,18 @@ async fn save_file(filepath: String) {
 
     std::fs::copy(buff_path, filepath).expect("Copy is failed");
 }
+
+#[tauri::command]
+async fn generate_map(filepath: String) -> String {
+    let img = image::open(filepath).unwrap();
+
+    let buff_path = get_buff_image_path();
+
+    method::image_matrix(img, buff_path.to_str().unwrap());
+
+    buff_path.to_str().unwrap().to_string()
+}
+
 fn get_buff_image_path() -> PathBuf {
     std::env::temp_dir().join("buff.png")
 }
@@ -45,7 +57,7 @@ pub fn run() {
         ::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![encrypt, extract_data, save_file])
+        .invoke_handler(tauri::generate_handler![encrypt, extract_data, save_file, generate_map])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

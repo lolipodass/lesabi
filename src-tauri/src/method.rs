@@ -1,4 +1,4 @@
-use image::{ DynamicImage, GenericImageView, ImageBuffer, Pixel, Rgba };
+use image::{ DynamicImage, GenericImageView, ImageBuffer, Pixel, Pixels, Rgba };
 
 pub fn hide(
     container: DynamicImage,
@@ -15,7 +15,6 @@ pub fn hide(
 
     let bits = split_into_bits(message, bits_per_channel);
     let mut iter = message_size.iter().chain(bits.iter()).peekable();
-
 
     for (x, y, mut pixel) in container.pixels() {
         let channels = pixel.channels_mut();
@@ -53,12 +52,12 @@ pub fn extract(container: DynamicImage, bits_per_channel: u8) -> Vec<u8> {
     let message_size = calculate_required_pixels(message_len, bits_per_channel, CHANNELS_AMOUNT);
 
     res.extend(read_bits_from_iter(&mut pixels, message_size, bits_per_channel));
-    
+
     combine_bits(&res, bits_per_channel)[..message_len as usize].to_vec()
 }
 
 fn take_bits_from_pixel(pixel: Rgba<u8>, bits_in_channel: u8) -> Vec<u8> {
-            let channels = pixel.channels();
+    let channels = pixel.channels();
 
     (0..3).map(move |i| get_bits(channels[i], bits_in_channel)).collect()
 }

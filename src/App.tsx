@@ -7,10 +7,13 @@ import { listen } from "@tauri-apps/api/event";
 const App = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [inputImagePath, setInputImagePath] = useState<string | null>(null);
+  const [inputMatrixPath, setInputMatrixPath] = useState<string>("");
   const [buffImagePath, setBuffImagePath] = useState<string | null>(null);
+  const [buffMatrixPath, setBuffMatrixPath] = useState<string>("");
   const [message, setMessage] = useState("Hello, world!");
   const [hideMessage, setHideMessage] = useState("");
   const [bitsPerChannel, setBitsPerChannel] = useState(1);
+  const [checked, setChecked] = useState(false);
   const [hideFunctionDuration, setHideFunctionDuration] = useState(0);
   const [extractFunctionDuration, setExtractFunctionDuration] = useState(0);
 
@@ -64,7 +67,12 @@ const App = () => {
     });
     if (file) {
       setInputImagePath(file);
+      if (checked) {
+        generateMap();
+      }
       setErrorMessage("");
+    } else {
+      setErrorMessage("Failed to open the file.");
     }
   };
 
@@ -113,6 +121,9 @@ const App = () => {
             bitsPerChannel,
           })
         );
+        if (checked) {
+          generateMap();
+        }
         setErrorMessage("");
       } catch (error: any) {
         console.error(error);
@@ -142,6 +153,41 @@ const App = () => {
     }
   };
 
+  const generateMap = async () => {
+    if (inputImagePath || buffImagePath) {
+      if (inputImagePath) {
+        try {
+          setInputMatrixPath(
+            await invoke("generate_map", {
+              filepath: inputImagePath,
+              name: "input",
+            })
+          );
+          setErrorMessage("");
+        } catch (error) {
+          console.error(error);
+          setErrorMessage("Failed to decrypt the image: " + error);
+        }
+      }
+      if (buffImagePath) {
+        try {
+          setBuffMatrixPath(
+            await invoke("generate_map", {
+              filepath: buffImagePath,
+              name: "buff",
+            })
+          );
+          setErrorMessage("");
+        } catch (error) {
+          console.error(error);
+          setErrorMessage("Failed to decrypt the image: " + error);
+        }
+      }
+    } else {
+      setErrorMessage("Please select at least one image first.");
+    }
+  };
+
   return (
     <>
       <h2>Steganography</h2>
@@ -158,13 +204,20 @@ const App = () => {
         <div className="image-comparison flex">
           <div className="image-container">
             {inputImagePath && (
-              <img src={convertFileSrc(inputImagePath)} alt="Initial image" />
+              <img
+                src={`${convertFileSrc(
+                  checked ? inputMatrixPath : inputImagePath
+                )}?${Date.now()}`}
+                alt="Initial image"
+              />
             )}
           </div>
           <div className="image-container">
             {buffImagePath && (
               <img
-                src={`${convertFileSrc(buffImagePath)}?${Date.now()}`}
+                src={`${convertFileSrc(
+                  checked ? buffMatrixPath : buffImagePath
+                )}?${Date.now()}`}
                 alt="Changed image"
               />
             )}
@@ -196,6 +249,17 @@ const App = () => {
             min="1"
             max="8"
           />
+          <div>
+            <input
+              id="image_matrix"
+              type="checkbox"
+              checked={checked}
+              onChange={() => setChecked(!checked)}
+              onClick={generateMap}
+              className="image_matrix"
+            />
+            <label htmlFor="image_matrix">image map</label>
+          </div>
         </div>
         <div className="message">{hideMessage}</div>
       </div>

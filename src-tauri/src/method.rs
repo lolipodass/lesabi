@@ -1,5 +1,13 @@
 use image::{ DynamicImage, GenericImageView, ImageBuffer, Pixel, Pixels, Rgba };
 
+use crate::pixel_manipulations::{
+    combine_bits,
+    convert_vec_to_single_bit,
+    get_bits,
+    split_into_bits,
+    write_bits,
+};
+
 pub fn hide(
     container: DynamicImage,
     message: &[u8],
@@ -126,70 +134,6 @@ fn map_pixel(mut pixel: Rgba<u8>) -> Rgba<u8> {
     pixel
 }
 
-fn get_bits(byte: u8, amount: u8) -> u8 {
-    if amount == 0 || amount > 8 {
-        return 0;
-    }
-    byte & ((1 << amount) - 1)
-}
-
-fn write_bits(byte: u8, bits: u8, amount: u8) -> u8 {
-    if amount == 0 || amount > 8 {
-        return byte;
-    }
-    let mask = (1 << amount) - 1;
-    (byte & !mask) | (bits & mask)
-}
-
-fn split_into_bits(bytes: &[u8], bits_per_chunk: u8) -> Vec<u8> {
-    let bit_count = bytes.len() * 8;
-    let bits_per_chunk = bits_per_chunk as usize;
-    let chunks_count = (bit_count + bits_per_chunk - 1) / bits_per_chunk;
-    let mut result = Vec::with_capacity(chunks_count);
-
-    let mut current_byte = 0u8;
-    let mut current_bits = 0;
-
-    for byte in bytes.iter() {
-        for i in (0..8).rev() {
-            let bit = (byte >> i) & 1;
-            current_byte = (current_byte << 1) | bit;
-            current_bits += 1;
-
-            if current_bits == bits_per_chunk {
-                result.push(current_byte);
-                current_byte = 0;
-                current_bits = 0;
-            }
-        }
-    }
-
-    if current_bits > 0 {
-        current_byte <<= bits_per_chunk - current_bits;
-        result.push(current_byte);
-    }
-
-    result
-}
-
-fn combine_bits(bytes: &[u8], bits_per_chunk: u8) -> Vec<u8> {
-    let bits_per_chunk = bits_per_chunk as usize;
-    let mut result = Vec::new();
-    let mut current_byte = 0u8;
-    let mut current_bits = 0;
-
-    for &byte in bytes {
-        for i in (0..bits_per_chunk).rev() {
-            let bit = (byte >> i) & 1;
-
-            current_byte = (current_byte << 1) | bit;
-            current_bits += 1;
-
-            if current_bits == 8 {
-                result.push(current_byte);
-                current_byte = 0;
-                current_bits = 0;
-            }
         }
     }
 

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 const App = () => {
   const [errorMessage, setErrorMessage] = useState("");
@@ -10,6 +11,29 @@ const App = () => {
   const [message, setMessage] = useState("Hello, world!");
   const [hideMessage, setHideMessage] = useState("");
   const [bitsPerChannel, setBitsPerChannel] = useState(1);
+  const [hideFunctionDuration, setHideFunctionDuration] = useState(0);
+  const [extractFunctionDuration, setExtractFunctionDuration] = useState(0);
+
+  useEffect(() => {
+    const hideTime = () => {
+      listen("hide_function_duration", (event: any) => {
+        console.log(event);
+
+        setHideFunctionDuration(event.payload);
+      });
+    };
+    hideTime();
+
+    const extractTime = () => {
+      listen("extract_function_duration", (event: any) => {
+        console.log(event);
+
+        setExtractFunctionDuration(event.payload);
+      });
+    };
+
+    extractTime();
+  }, []);
 
   const OpenFile = async () => {
     const file = await open({
@@ -155,13 +179,18 @@ const App = () => {
           </button>
         </div>
         <div className="flex toolbar">
-          <input
-            type="text"
+          <div>time to hide: {hideFunctionDuration}, ms</div>
+          <div>time to reveal: {extractFunctionDuration}, ms</div>
+        </div>
+        <div className="flex toolbar">
+          <textarea
+            placeholder="Message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
           <input
             type="number"
+            placeholder="Bits per channel"
             value={bitsPerChannel}
             onChange={(e) => setBitsPerChannel(Number(e.target.value))}
             min="1"

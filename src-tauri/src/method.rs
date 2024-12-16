@@ -12,7 +12,21 @@ pub fn hide(
     container: DynamicImage,
     message: &[u8],
     bits_per_channel: u8
-) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, String> {
+    if bits_per_channel == 0 || bits_per_channel > 8 {
+        return Err("Invalid bits per channel".to_string());
+    }
+
+    if message.is_empty() {
+        return Err("Message is empty".to_string());
+    }
+
+    let (w, h) = container.dimensions();
+    let max_message_size = ((w * h * 3 * (bits_per_channel as u32)) / 8) as usize;
+
+    if message.len() > max_message_size {
+        return Err("Message too large for container image".to_string());
+    }
     let (w, h) = container.dimensions();
 
     let mut res = ImageBuffer::new(w, h);
@@ -42,42 +56,61 @@ pub fn hide(
     let pixel = Rgba([1, 1, 1, 0]);
 
     res.put_pixel(w - 1, h - 1, pixel);
-    res
+    Ok(res)
 }
 
-pub fn extract(container: DynamicImage, bits_per_channel: u8) -> Vec<u8> {
+pub fn extract(container: DynamicImage, bits_per_channel: u8) -> Result<Vec<u8>, String> {
     const CHANNELS_AMOUNT: u64 = 3;
 
     let (w, h) = container.dimensions();
 
     if w < 10 || h < 10 {
-        return Vec::new();
+        return Err("Image too small".to_string());
     }
 
     let pixel = container.get_pixel(w - 1, h - 1);
 
     if pixel[0] != 1 || pixel[1] != 1 || pixel[2] != 1 {
-        return Vec::new();
+        return Err("No hidden message marker found".to_string());
+    }
+
+    if bits_per_channel == 0 || bits_per_channel > 8 {
+        return Err("Invalid bits per channel".to_string());
     }
 
     let mut pixels = container.pixels();
 
-    let amount_pixel_to_len = calculate_required_pixels(8, bits_per_channel, CHANNELS_AMOUNT);
+    let pixels_for_length = calculate_required_pixels(8, bits_per_channel, CHANNELS_AMOUNT);
 
-    let message_size = read_bits_from_iter(&mut pixels, amount_pixel_to_len, bits_per_channel);
+    let length_bits = read_bits_from_iter(&mut pixels, pixels_for_length, bits_per_channel);
 
-    let message_len = u64::from_be_bytes(
-        combine_bits(&message_size[..64], bits_per_channel)
+    let length_bit_vector = convert_vec_to_single_bit(length_bits, bits_per_channel);
+
+    let actual_message_length = u64::from_be_bytes(
+        combine_bits(&length_bit_vector[..64], 1)
             .try_into()
             .unwrap()
     );
-    let mut res = message_size[64..].to_vec();
 
-    let message_size = calculate_required_pixels(message_len, bits_per_channel, CHANNELS_AMOUNT);
+    if actual_message_length == 0 {
+        return Ok(Vec::new());
+    }
+    let mut extracted_message_bits = length_bit_vector[64..].to_vec();
 
-    res.extend(read_bits_from_iter(&mut pixels, message_size, bits_per_channel));
+    let message_size = calculate_required_pixels(
+        actual_message_length,
+        bits_per_channel,
+        CHANNELS_AMOUNT
+    );
 
-    combine_bits(&res, bits_per_channel)[..message_len as usize].to_vec()
+    extracted_message_bits.extend(
+        convert_vec_to_single_bit(
+            read_bits_from_iter(&mut pixels, message_size, bits_per_channel),
+            bits_per_channel
+        )
+    );
+
+    Ok(combine_bits(&extracted_message_bits, 1)[..actual_message_length as usize].to_vec())
 }
 
 fn take_bits_from_pixel(pixel: Rgba<u8>, bits_in_channel: u8) -> Vec<u8> {
@@ -114,13 +147,22 @@ fn calculate_required_pixels(size: u64, bits_per_channel: u8, channel_amount: u6
     }
 }
 
+#[test]
+fn test_stego() {
+    let mut img = ImageBuffer::new(250, 250);
+    for x in 0..250 {
+        for y in 0..250 {
+            img.put_pixel(x, y, Rgba([x as u8, y as u8, 0, 0]));
         }
     }
+    let message = b"Hello world";
+    for bit in 1..=8 {
+        println!("\n\n\nbit {}", bit);
 
-    if current_bits > 0 {
-        current_byte <<= 8 - current_bits;
-        result.push(current_byte);
+        let hidden = hide(img.clone().try_into().unwrap(), message, bit).unwrap();
+        let res = extract(hidden.try_into().unwrap(), bit).unwrap();
+        // assert_eq!(res, message);
+        println!("equal? {}", res == message);
     }
-
-    result
+    panic!()
 }

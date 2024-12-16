@@ -55,8 +55,12 @@ const App = () => {
         ],
       });
       if (file) {
-        await invoke("save_file", { filepath: file });
-        setErrorMessage("");
+        try {
+          await invoke("save_file", { filepath: file });
+          setErrorMessage("");
+        } catch (error: any) {
+          setErrorMessage(error);
+        }
       } else {
         setErrorMessage("Failed to save the file.");
       }
@@ -86,9 +90,9 @@ const App = () => {
           })
         );
         setErrorMessage("");
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
-        setErrorMessage("Failed to encrypt the image.");
+        setErrorMessage(`Failed to encrypt the image: ${error}`);
       }
     } else {
       setErrorMessage("Please select an image first.");

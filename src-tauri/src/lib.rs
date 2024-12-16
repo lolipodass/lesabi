@@ -5,29 +5,37 @@ use method::hide;
 mod method;
 
 #[tauri::command]
-async fn hide_data(filepath: String, message: String, bits_per_channel: u8) -> String {
-    let img = image::open(filepath).unwrap();
-
-    let mut bits_per_channel = bits_per_channel;
-    if bits_per_channel > 8 {
-        bits_per_channel = 8;
-    }
-    let result = hide(img, message.as_bytes(), bits_per_channel);
-
-    let buff_path = std::env::temp_dir().join("buff.png");
-    result.save(&buff_path).expect("Saved is failed");
-    buff_path.to_str().unwrap().to_string()
-}
-
-#[tauri::command]
-async fn extract_data(filepath: String, bits_per_channel: u8) -> String {
-    let img = image::open(filepath).unwrap();
+async fn hide_data(
+    app: tauri::AppHandle,
+    filepath: String,
+    message: String,
+    bits_per_channel: u8
+) -> Result<String, String> {
+    let img = image::open(filepath).map_err(|_| "Failed to open image")?;
 
     let bits_per_channel = bits_per_channel.min(8);
 
-    let result = method::extract(img, bits_per_channel);
+    let result = hide(img, message.as_bytes(), bits_per_channel)?;
+    let buff_path = std::env::temp_dir().join("buff.png");
 
-    String::from_utf8_lossy(&result).to_string()
+    result.save(&buff_path).map_err(|_| "Failed to save image")?;
+
+    Ok(buff_path.to_str().unwrap().to_string())
+}
+
+#[tauri::command]
+async fn extract_data(
+    app: tauri::AppHandle,
+    filepath: String,
+    bits_per_channel: u8
+) -> Result<String, String> {
+    let img = image::open(filepath).map_err(|_| "Failed to open image")?;
+
+    let bits_per_channel = bits_per_channel.min(8);
+
+    let result = method::extract(img, bits_per_channel)?;
+
+    Ok(String::from_utf8_lossy(&result).to_string())
 }
 
 #[tauri::command]
